@@ -19,7 +19,7 @@ class VideoTagger(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Enhanced Video Tagger")
-        self.setGeometry(100, 100, 1600, 1000)
+        self.setGeometry(100, 100, 1400, 900)  # Slightly smaller default width
         
         # Initialize variables
         self.video_files = []
@@ -60,11 +60,24 @@ class VideoTagger(QMainWindow):
         
         # Content movement types
         self.content_movement_types = [
-            "Static", "Walking", "Running", "Sitting", "Standing", "Dancing", "Exercising",
-            "Cooking", "Eating", "Drinking", "Working", "Reading", "Writing", "Typing",
-            "Teaching", "Learning", "Presenting", "Meeting", "Shopping", "Cleaning",
-            "Driving", "Cycling", "Swimming", "Lifting", "Carrying", "Opening", "Closing",
-            "Other"
+            "High", "Medium", "Low", "No movement"
+        ]
+        
+        # Handheld camera options
+        self.handheld_options = [
+            "Yes", "No", "Partially", "Uncertain"
+        ]
+        
+        # Depth of field options
+        self.depth_of_field_options = [
+            "Shallow", "Medium", "Deep", "Very Deep", "Variable", "Uncertain"
+        ]
+        
+        # Color scale options
+        self.color_scale_options = [
+            "Color", "Black & White", "Sepia", "Monochrome", "High Contrast", 
+            "Low Saturation", "High Saturation", "Warm Tone", "Cool Tone", 
+            "Neutral", "Vintage", "Cinematic", "Other"
         ]
         
         # Create main widget and layout
@@ -128,8 +141,8 @@ class VideoTagger(QMainWindow):
         right_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
-        right_layout.setSpacing(10)
-        right_layout.setContentsMargins(10, 10, 10, 10)
+        right_layout.setSpacing(5)  # Reduced from 10
+        right_layout.setContentsMargins(8, 8, 8, 8)  # Reduced from 10, 10, 10, 10
         
         # Select directory button
         self.select_dir_button = QPushButton("Select Video Directory")
@@ -178,9 +191,19 @@ class VideoTagger(QMainWindow):
         
         self.moments_input = QTextEdit()
         self.moments_input.setPlaceholderText("Enter key moments with timestamps (e.g., 00:15 - Introduction, 01:30 - Main event)")
-        self.moments_input.setMaximumHeight(80)
+        self.moments_input.setMaximumHeight(60)
         moments_layout.addWidget(self.moments_input)
         right_layout.addWidget(moments_group)
+        
+        # General caption section
+        caption_group = QGroupBox("General Caption")
+        caption_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px 0 5px; }")
+        caption_layout = QVBoxLayout(caption_group)
+        self.caption_input = QTextEdit()
+        self.caption_input.setPlaceholderText("Describe the overall video content (e.g., 'A cooking tutorial showing how to make pasta from scratch')")
+        self.caption_input.setMaximumHeight(60)
+        caption_layout.addWidget(self.caption_input)
+        right_layout.addWidget(caption_group)
         
         # Location classes section
         location_group = QGroupBox("Location Classes")
@@ -199,16 +222,27 @@ class VideoTagger(QMainWindow):
         actions_layout = QVBoxLayout(actions_group)
         self.actions_input = QTextEdit()
         self.actions_input.setPlaceholderText("Enter actions or select from common ones")
-        self.actions_input.setMaximumHeight(80)
+        self.actions_input.setMaximumHeight(60)
         actions_layout.addWidget(self.actions_input)
         
         # Common actions checkboxes
         actions_checkbox_layout = QHBoxLayout()
         self.action_checkboxes = {}
-        for action in self.action_types[:8]:  # Show first 8 as checkboxes
+        
+        # Create multiple rows of checkboxes for better space usage
+        actions_row1_layout = QHBoxLayout()
+        actions_row2_layout = QHBoxLayout()
+        
+        for i, action in enumerate(self.action_types[:8]):  # Show first 8 as checkboxes
             checkbox = QCheckBox(action)
             self.action_checkboxes[action] = checkbox
-            actions_checkbox_layout.addWidget(checkbox)
+            if i < 4:
+                actions_row1_layout.addWidget(checkbox)
+            else:
+                actions_row2_layout.addWidget(checkbox)
+        
+        actions_checkbox_layout.addLayout(actions_row1_layout)
+        actions_checkbox_layout.addLayout(actions_row2_layout)
         actions_layout.addLayout(actions_checkbox_layout)
         right_layout.addWidget(actions_group)
         
@@ -216,14 +250,44 @@ class VideoTagger(QMainWindow):
         movement_group = QGroupBox("Camera Movement")
         movement_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px 0 5px; }")
         movement_layout = QVBoxLayout(movement_group)
-        self.movement_combo = QComboBox()
-        self.movement_combo.addItems(self.movement_types)
-        self.movement_combo.currentTextChanged.connect(self.on_movement_changed)
-        movement_layout.addWidget(self.movement_combo)
+        
+        # Movement checkboxes for multiple selection
+        self.movement_checkboxes = {}
+        movement_checkbox_layout = QVBoxLayout()
+        
+        # Create three columns of checkboxes for better space usage
+        movement_col1_layout = QHBoxLayout()
+        movement_col2_layout = QHBoxLayout()
+        movement_col3_layout = QHBoxLayout()
+        
+        for i, movement in enumerate(self.movement_types):
+            checkbox = QCheckBox(movement)
+            checkbox.stateChanged.connect(self.update_movements_from_checkboxes)
+            self.movement_checkboxes[movement] = checkbox
+            
+            # Distribute checkboxes into three columns
+            if i < len(self.movement_types) // 3:
+                movement_col1_layout.addWidget(checkbox)
+            elif i < 2 * len(self.movement_types) // 3:
+                movement_col2_layout.addWidget(checkbox)
+            else:
+                movement_col3_layout.addWidget(checkbox)
+        
+        movement_checkbox_layout.addLayout(movement_col1_layout)
+        movement_checkbox_layout.addLayout(movement_col2_layout)
+        movement_checkbox_layout.addLayout(movement_col3_layout)
+        movement_layout.addLayout(movement_checkbox_layout)
+        
+        # Movement display area (read-only)
+        self.movement_display = QTextEdit()
+        self.movement_display.setPlaceholderText("Selected movements will appear here...")
+        self.movement_display.setMaximumHeight(50)
+        self.movement_display.setReadOnly(True)
+        movement_layout.addWidget(self.movement_display)
         
         # Movement description field (for "Other" option)
         self.movement_description = QLineEdit()
-        self.movement_description.setPlaceholderText("Describe camera movement (appears when 'Other' is selected)")
+        self.movement_description.setPlaceholderText("Describe custom camera movement (appears when 'Other' is selected)")
         self.movement_description.setVisible(False)
         movement_layout.addWidget(self.movement_description)
         right_layout.addWidget(movement_group)
@@ -234,14 +298,7 @@ class VideoTagger(QMainWindow):
         content_movement_layout = QVBoxLayout(content_movement_group)
         self.content_movement_combo = QComboBox()
         self.content_movement_combo.addItems(self.content_movement_types)
-        self.content_movement_combo.currentTextChanged.connect(self.on_content_movement_changed)
         content_movement_layout.addWidget(self.content_movement_combo)
-        
-        # Content movement description field (for "Other" option)
-        self.content_movement_description = QLineEdit()
-        self.content_movement_description.setPlaceholderText("Describe content movement (appears when 'Other' is selected)")
-        self.content_movement_description.setVisible(False)
-        content_movement_layout.addWidget(self.content_movement_description)
         right_layout.addWidget(content_movement_group)
         
         # Shot types section
@@ -253,13 +310,47 @@ class VideoTagger(QMainWindow):
         shot_layout.addWidget(self.shot_combo)
         right_layout.addWidget(shot_group)
         
+        # Handheld camera section
+        handheld_group = QGroupBox("Handheld Camera")
+        handheld_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px 0 5px; }")
+        handheld_layout = QVBoxLayout(handheld_group)
+        self.handheld_combo = QComboBox()
+        self.handheld_combo.addItems(self.handheld_options)
+        handheld_layout.addWidget(self.handheld_combo)
+        right_layout.addWidget(handheld_group)
+        
+        # Depth of field section
+        dof_group = QGroupBox("Depth of Field")
+        dof_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px 0 5px; }")
+        dof_layout = QVBoxLayout(dof_group)
+        self.dof_combo = QComboBox()
+        self.dof_combo.addItems(self.depth_of_field_options)
+        dof_layout.addWidget(self.dof_combo)
+        right_layout.addWidget(dof_group)
+        
+        # Color scale section
+        color_group = QGroupBox("Color Scale")
+        color_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px 0 5px; }")
+        color_layout = QVBoxLayout(color_group)
+        self.color_combo = QComboBox()
+        self.color_combo.addItems(self.color_scale_options)
+        self.color_combo.currentTextChanged.connect(self.on_color_scale_changed)
+        color_layout.addWidget(self.color_combo)
+        
+        # Color scale description field (for "Other" option)
+        self.color_description = QLineEdit()
+        self.color_description.setPlaceholderText("Describe color scale (appears when 'Other' is selected)")
+        self.color_description.setVisible(False)
+        color_layout.addWidget(self.color_description)
+        right_layout.addWidget(color_group)
+        
         # General tags section
         tags_group = QGroupBox("General Tags")
         tags_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px 0 5px; }")
         tags_layout = QVBoxLayout(tags_group)
         self.tag_input = QTextEdit()
         self.tag_input.setPlaceholderText("Enter additional general tags here...")
-        self.tag_input.setMaximumHeight(80)
+        self.tag_input.setMaximumHeight(60)
         tags_layout.addWidget(self.tag_input)
         right_layout.addWidget(tags_group)
         
@@ -282,7 +373,7 @@ class VideoTagger(QMainWindow):
         # Add panels to splitter
         splitter.addWidget(left_panel)
         splitter.addWidget(right_scroll)
-        splitter.setSizes([800, 400])  # Initial split ratio
+        splitter.setSizes([1000, 350])  # More space for video, less for tagging panel
         
         # Connect signals
         self.prev_button.clicked.connect(self.previous_video)
@@ -291,7 +382,6 @@ class VideoTagger(QMainWindow):
         self.save_button.clicked.connect(self.save_tags)
         self.export_button.clicked.connect(self.export_to_csv)
         self.select_dir_button.clicked.connect(self.select_directory)
-        self.timestamp_button.clicked.connect(self.add_current_timestamp)
         
         # Connect action checkboxes
         for checkbox in self.action_checkboxes.values():
@@ -300,13 +390,16 @@ class VideoTagger(QMainWindow):
         # Connect input field changes to update UI
         self.people_input.textChanged.connect(self.update_ui)
         self.moments_input.textChanged.connect(self.update_ui)
+        self.caption_input.textChanged.connect(self.update_ui)
         self.location_combo.currentTextChanged.connect(self.update_ui)
         self.actions_input.textChanged.connect(self.update_ui)
-        self.movement_combo.currentTextChanged.connect(self.update_ui)
         self.movement_description.textChanged.connect(self.update_ui)
         self.content_movement_combo.currentTextChanged.connect(self.update_ui)
-        self.content_movement_description.textChanged.connect(self.update_ui)
         self.shot_combo.currentTextChanged.connect(self.update_ui)
+        self.handheld_combo.currentTextChanged.connect(self.update_ui)
+        self.dof_combo.currentTextChanged.connect(self.update_ui)
+        self.color_combo.currentTextChanged.connect(self.update_ui)
+        self.color_description.textChanged.connect(self.update_ui)
         self.tag_input.textChanged.connect(self.update_ui)
         
         # Timer for updating progress slider
@@ -361,18 +454,28 @@ class VideoTagger(QMainWindow):
                 # Load structured tags
                 self.people_input.setText(tag_data.get('people', ''))
                 self.moments_input.setText(tag_data.get('moments', ''))
+                self.caption_input.setText(tag_data.get('caption', ''))
                 self.location_combo.setCurrentText(tag_data.get('location', ''))
                 self.actions_input.setText(tag_data.get('actions', ''))
-                self.movement_combo.setCurrentText(tag_data.get('movement', ''))
+                
+                # Load movement checkboxes
+                saved_movements = tag_data.get('movement', '').split(',') if tag_data.get('movement') else []
+                for movement, checkbox in self.movement_checkboxes.items():
+                    checkbox.setChecked(movement.strip() in [m.strip() for m in saved_movements])
+                self.movement_display.setText(tag_data.get('movement', ''))
                 self.movement_description.setText(tag_data.get('movement_description', ''))
+                
                 self.content_movement_combo.setCurrentText(tag_data.get('content_movement', ''))
-                self.content_movement_description.setText(tag_data.get('content_movement_description', ''))
                 self.shot_combo.setCurrentText(tag_data.get('shot_type', ''))
+                self.handheld_combo.setCurrentText(tag_data.get('handheld', ''))
+                self.dof_combo.setCurrentText(tag_data.get('depth_of_field', ''))
+                self.color_combo.setCurrentText(tag_data.get('color_scale', ''))
+                self.color_description.setText(tag_data.get('color_scale_description', ''))
                 self.tag_input.setText(tag_data.get('general_tags', ''))
                 
                 # Show/hide description fields based on current selections
-                self.movement_description.setVisible(tag_data.get('movement', '') == 'Other')
-                self.content_movement_description.setVisible(tag_data.get('content_movement', '') == 'Other')
+                self.movement_description.setVisible(bool(saved_movements) and saved_movements[-1].strip() == 'Other')
+                self.color_description.setVisible(tag_data.get('color_scale', '') == 'Other')
                 
                 # Load action checkboxes
                 saved_actions = tag_data.get('actions', '').split(',') if tag_data.get('actions') else []
@@ -389,16 +492,25 @@ class VideoTagger(QMainWindow):
         """Clear all structured tag inputs"""
         self.people_input.clear()
         self.moments_input.clear()
+        self.caption_input.clear()
         self.location_combo.setCurrentText('')
         self.actions_input.clear()
-        self.movement_combo.setCurrentText('')
+        
+        # Clear movement checkboxes and display
+        for checkbox in self.movement_checkboxes.values():
+            checkbox.setChecked(False)
+        self.movement_display.clear()
         self.movement_description.clear()
         self.movement_description.setVisible(False)
+        
         self.content_movement_combo.setCurrentText('')
-        self.content_movement_description.clear()
-        self.content_movement_description.setVisible(False)
         self.shot_combo.setCurrentText('')
-        self.tag_input.clear()
+        self.handheld_combo.setCurrentText('')
+        self.dof_combo.setCurrentText('')
+        self.color_combo.setCurrentText('')
+        self.color_description.clear()
+        self.color_description.setVisible(False)
+            self.tag_input.clear()
         
         # Clear checkboxes
         for checkbox in self.action_checkboxes.values():
@@ -517,13 +629,17 @@ class VideoTagger(QMainWindow):
         tag_data = {
             'people': self.people_input.text().strip(),
             'moments': self.moments_input.toPlainText().strip(),
+            'caption': self.caption_input.toPlainText().strip(),
             'location': self.location_combo.currentText().strip(),
             'actions': self.actions_input.toPlainText().strip(),
-            'movement': self.movement_combo.currentText().strip(),
+            'movement': self.movement_display.toPlainText().strip(),
             'movement_description': self.movement_description.text().strip(),
             'content_movement': self.content_movement_combo.currentText().strip(),
-            'content_movement_description': self.content_movement_description.text().strip(),
             'shot_type': self.shot_combo.currentText().strip(),
+            'handheld': self.handheld_combo.currentText().strip(),
+            'depth_of_field': self.dof_combo.currentText().strip(),
+            'color_scale': self.color_combo.currentText().strip(),
+            'color_scale_description': self.color_description.text().strip(),
             'general_tags': self.tag_input.toPlainText().strip()
         }
         
@@ -551,13 +667,17 @@ class VideoTagger(QMainWindow):
         current_tag_data = {
             'people': self.people_input.text().strip(),
             'moments': self.moments_input.toPlainText().strip(),
+            'caption': self.caption_input.toPlainText().strip(),
             'location': self.location_combo.currentText().strip(),
             'actions': self.actions_input.toPlainText().strip(),
-            'movement': self.movement_combo.currentText().strip(),
+            'movement': self.movement_display.toPlainText().strip(),
             'movement_description': self.movement_description.text().strip(),
             'content_movement': self.content_movement_combo.currentText().strip(),
-            'content_movement_description': self.content_movement_description.text().strip(),
             'shot_type': self.shot_combo.currentText().strip(),
+            'handheld': self.handheld_combo.currentText().strip(),
+            'depth_of_field': self.dof_combo.currentText().strip(),
+            'color_scale': self.color_combo.currentText().strip(),
+            'color_scale_description': self.color_description.text().strip(),
             'general_tags': self.tag_input.toPlainText().strip()
         }
         
@@ -592,13 +712,17 @@ class VideoTagger(QMainWindow):
             tag_data = {
                 'people': self.people_input.text().strip(),
                 'moments': self.moments_input.toPlainText().strip(),
+                'caption': self.caption_input.toPlainText().strip(),
                 'location': self.location_combo.currentText().strip(),
                 'actions': self.actions_input.toPlainText().strip(),
-                'movement': self.movement_combo.currentText().strip(),
+                'movement': self.movement_display.toPlainText().strip(),
                 'movement_description': self.movement_description.text().strip(),
                 'content_movement': self.content_movement_combo.currentText().strip(),
-                'content_movement_description': self.content_movement_description.text().strip(),
                 'shot_type': self.shot_combo.currentText().strip(),
+                'handheld': self.handheld_combo.currentText().strip(),
+                'depth_of_field': self.dof_combo.currentText().strip(),
+                'color_scale': self.color_combo.currentText().strip(),
+                'color_scale_description': self.color_description.text().strip(),
                 'general_tags': self.tag_input.toPlainText().strip()
             }
             
@@ -606,7 +730,7 @@ class VideoTagger(QMainWindow):
             has_content = any(value for value in tag_data.values())
             if has_content:
                 self.tags[current_file] = tag_data
-                QMessageBox.information(self, "Saved", "Tags saved successfully!")
+            QMessageBox.information(self, "Saved", "Tags saved successfully!")
             else:
                 QMessageBox.warning(self, "No Tags", "Please enter at least one tag before saving!")
     
@@ -626,13 +750,17 @@ class VideoTagger(QMainWindow):
                         'file_path': file_path_key,
                         'people': tag_data.get('people', ''),
                         'key_moments': tag_data.get('moments', ''),
+                        'caption': tag_data.get('caption', ''),
                         'location': tag_data.get('location', ''),
                         'actions': tag_data.get('actions', ''),
                         'movement': tag_data.get('movement', ''),
                         'movement_description': tag_data.get('movement_description', ''),
                         'content_movement': tag_data.get('content_movement', ''),
-                        'content_movement_description': tag_data.get('content_movement_description', ''),
                         'shot_type': tag_data.get('shot_type', ''),
+                        'handheld': tag_data.get('handheld', ''),
+                        'depth_of_field': tag_data.get('depth_of_field', ''),
+                        'color_scale': tag_data.get('color_scale', ''),
+                        'color_scale_description': tag_data.get('color_scale_description', ''),
                         'general_tags': tag_data.get('general_tags', '')
                     }
                 else:
@@ -641,13 +769,17 @@ class VideoTagger(QMainWindow):
                         'file_path': file_path_key,
                         'people': '',
                         'key_moments': '',
+                        'caption': '',
                         'location': '',
                         'actions': '',
                         'movement': '',
                         'movement_description': '',
                         'content_movement': '',
-                        'content_movement_description': '',
                         'shot_type': '',
+                        'handheld': '',
+                        'depth_of_field': '',
+                        'color_scale': '',
+                        'color_scale_description': '',
                         'general_tags': tag_data
                     }
                 data.append(row)
@@ -690,13 +822,25 @@ class VideoTagger(QMainWindow):
 
     def add_current_timestamp(self):
         """Add current video timestamp to key moments"""
+        if not self.video_files:
+            QMessageBox.information(self, "No Video", "Please select a video directory first.")
+            return
+            
         if self.media_player.isPlaying() or self.media_player.position() > 0:
             current_pos = self.media_player.position()
             timestamp = str(timedelta(seconds=current_pos // 1000))
-            current_text = self.moments_input.toPlainText()
+            current_text = self.moments_input.toPlainText().strip()
+            
+            # Check if the timestamp already exists at the end to prevent duplicates
+            if current_text and current_text.endswith(f"{timestamp} -"):
+                return  # Don't add duplicate timestamp
             
             if current_text:
-                self.moments_input.setText(f"{current_text}\n{timestamp} - ")
+                # Add newline only if there's existing content and it doesn't end with a newline
+                if not current_text.endswith('\n'):
+                    self.moments_input.setText(f"{current_text}\n{timestamp} - ")
+                else:
+                    self.moments_input.setText(f"{current_text}{timestamp} - ")
             else:
                 self.moments_input.setText(f"{timestamp} - ")
             
@@ -709,14 +853,20 @@ class VideoTagger(QMainWindow):
         else:
             QMessageBox.information(self, "No Video", "Please play the video first to get a timestamp.")
 
-    def on_movement_changed(self, text):
-        """Show/hide movement description field based on selection"""
-        self.movement_description.setVisible(text == "Other")
+    def update_movements_from_checkboxes(self):
+        """Update movement display based on selected checkboxes"""
+        selected_movements = []
+        for movement, checkbox in self.movement_checkboxes.items():
+            if checkbox.isChecked():
+                selected_movements.append(movement)
+        
+        self.movement_display.setText(', '.join(selected_movements))
+        self.movement_description.setVisible(bool(selected_movements) and selected_movements[-1] == "Other")
         self.update_ui()
     
-    def on_content_movement_changed(self, text):
-        """Show/hide content movement description field based on selection"""
-        self.content_movement_description.setVisible(text == "Other")
+    def on_color_scale_changed(self, text):
+        """Show/hide color scale description field based on selection"""
+        self.color_description.setVisible(text == "Other")
         self.update_ui()
 
 if __name__ == '__main__':

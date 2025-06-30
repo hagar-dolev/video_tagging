@@ -15,32 +15,51 @@ A comprehensive video tagging application built with PyQt6 that allows you to ta
    - Use the "Add Current Time" button to automatically insert timestamps
    - Format: "00:15 - Introduction, 01:30 - Main event"
 
-3. **Location Classes** - Categorize the video location
+3. **General Caption** - Overall description of the video content
+
+   - High-level summary without time references
+   - Example: "A cooking tutorial showing how to make pasta from scratch"
+
+4. **Location Classes** - Categorize the video location
 
    - Predefined options: Indoor, Outdoor, Office, Home, Street, Park, etc.
    - Editable dropdown with custom location support
 
-4. **Actions** - Describe what's happening in the video
+5. **Actions** - Describe what's happening in the video
 
    - Text input for custom actions
    - Quick checkboxes for common actions: Walking, Running, Sitting, Talking, etc.
 
-5. **Camera Movement** - Specify camera motion
+6. **Camera Movement** - Specify camera motion
 
+   - **Multiple selection**: Check multiple movements that occur in the shot
    - Options: Static, Pan Left/Right, Tilt Up/Down/Left/Right, Zoom In/Out, etc.
    - "Other" option with description field for custom movements
+   - Selected movements are displayed in a summary area
 
-6. **Content Movement** - Describe movement of subjects/content in the video
+7. **Content Movement** - Describe movement of subjects/content in the video
 
-   - Options: Static, Walking, Running, Sitting, Standing, Dancing, etc.
-   - "Other" option with description field for custom content movements
+   - Options: High, Medium, Low, No movement
+   - Simple intensity-based classification
 
-7. **Shot Types** - Define the camera shot composition
+8. **Shot Types** - Define the camera shot composition
 
    - Options: Close-Up, Medium Shot, Long Shot, Two Shot, etc.
 
-8. **General Tags** - Additional free-form tags
-   - For any other relevant information
+9. **Handheld Camera** - Detect if camera is handheld
+
+   - Options: Yes, No, Partially, Uncertain
+
+10. **Depth of Field** - Describe the depth of field in the shot
+
+    - Options: Shallow, Medium, Deep, Very Deep, Variable, Uncertain
+
+11. **Color Scale** - Describe the color characteristics of the frame
+
+    - Options: Color, Black & White, Sepia, Monochrome, High Contrast, Low Saturation, High Saturation, Warm Tone, Cool Tone, Neutral, Vintage, Cinematic, Other
+
+12. **General Tags** - Additional free-form tags
+    - For any other relevant information
 
 ### 🎬 Video Playback Features
 
@@ -88,11 +107,15 @@ A comprehensive video tagging application built with PyQt6 that allows you to ta
    - Fill in the structured tagging fields:
      - **People**: Enter names separated by commas
      - **Key Moments**: Use "Add Current Time" button while playing, then describe the moment
+     - **General Caption**: Describe the overall video content without time references
      - **Location**: Select from dropdown or type custom location
      - **Actions**: Check common actions or type custom ones
-     - **Movement**: Select camera movement type (with "Other" option for custom descriptions)
-     - **Content Movement**: Select movement of subjects/content (with "Other" option for custom descriptions)
+     - **Movement**: Check multiple camera movements that occur in the shot (with "Other" option for custom descriptions)
+     - **Content Movement**: Select movement intensity level (High, Medium, Low, No movement)
      - **Shot Type**: Choose the shot composition
+     - **Handheld Camera**: Indicate if the camera is handheld
+     - **Depth of Field**: Describe the depth of field characteristics
+     - **Color Scale**: Select color characteristics (with "Other" option for custom descriptions)
      - **General Tags**: Add any additional tags
 
 3. **Save and Export**
@@ -107,13 +130,17 @@ The exported CSV contains the following columns:
 - `file_path` - Path to the video file
 - `people` - List of people present
 - `key_moments` - Timestamped key moments
+- `caption` - General description of video content
 - `location` - Location classification
 - `actions` - Actions occurring in the video
 - `movement` - Camera movement type
 - `movement_description` - Description for custom camera movements
 - `content_movement` - Movement of subjects/content in the video
-- `content_movement_description` - Description for custom content movements
 - `shot_type` - Shot composition type
+- `handheld` - Whether camera is handheld
+- `depth_of_field` - Depth of field characteristics
+- `color_scale` - Color characteristics of the frame
+- `color_scale_description` - Description for custom color scales
 - `general_tags` - Additional free-form tags
 
 ## UI Features
